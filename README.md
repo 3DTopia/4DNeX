@@ -26,8 +26,8 @@
 </div>
 
 <p align="center">
-  <a href="" target='_blank'>
-    <img src="http://img.shields.io/badge/arXiv-25xx.xxxxx-b31b1b?logo=arxiv&logoColor=b31b1b" alt="ArXiv">
+  <a href="https://arxiv.org/abs/2508.13154" target='_blank'>
+    <img src="http://img.shields.io/badge/arXiv-2508.13154-b31b1b?logo=arxiv&logoColor=b31b1b" alt="ArXiv">
   </a>
   <a href="https://4dnex.github.io/4DNeX.pdf" target='_blank'><img src="https://img.shields.io/badge/Paper-PDF-f5cac3?logo=adobeacrobatreader&logoColor=red"/></a>
   <a href="https://4dnex.github.io/" target='_blank'>
@@ -59,5 +59,10 @@ We present **4DNeX**, the first feed-forward framework for generating 4D (i.e., 
 If you find our work useful for your research, please consider citing our paper:
 
 ```
-
+@article{chen20254dnex,
+    title={4DNeX: Feed-Forward 4D Generative Modeling Made Easy},
+    author={Chen, Zhaoxi and Liu, Tianqi and Zhuo, Long and Ren, Jiawei and Tao, Zeng and Zhu, He and Hong, Fangzhou and Pan, Liang and Liu, Ziwei},
+    journal={arXiv preprint arXiv:2508.13154},
+    year={2025}
+}
 ```
