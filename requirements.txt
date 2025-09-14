@@ -1,0 +1,13 @@
+diffusers
+transformers
+accelerate
+sentencepiece
+transformers
+peft
+wandb
+decord
+deepspeed
+opencv-python-headless
+imageio
+imageio-ffmpeg
+viser
