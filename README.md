@@ -103,8 +103,9 @@ export PRETRAINED_LORA_PATH=./pretrained/4dnex-lora
 ### Inference 
 After setup the environment and pretrained model, you can run the following command to generate 4D scene representations from a single image, the output video and point map will be saved in the `OUTPUT_DIR` directory:
 ```bash
-python inference.py --prompt ./data/evaluation/prompts.txt --image ./data/evaluation/short.txt --out <OUTPUT_DIR> --sft_path ./pretrained/Wan2.1-I2V-14B-480P-Diffusers/transformer  --type i2vwbw-demb-samerope --mode xyzrgb --lora_path <PRETRAINED_LORA_PATH> --lora_rank 64
+python inference.py --prompt ./example/prompt.txt --image ./example/image.txt --out <OUTPUT_DIR> --sft_path ./pretrained/Wan2.1-I2V-14B-480P-Diffusers/transformer  --type i2vwbw-demb-samerope --mode xyzrgb --lora_path <PRETRAINED_LORA_PATH> --lora_rank 64
 ```
+We store the path to the image in the `./example/image.txt` file, and the prompt in the `./example/prompt.txt` file for inference. Feel free to modify the prompt and image path to generate your own 4D scene representations.
 
 ## 🔥 Training
 
@@ -120,9 +121,9 @@ bash scripts/finetune.sh
 ```
 
 ### Convert Zero Checkpoint to FP32
-After training, you may convert the zero checkpoint to fp32 checkpoint for inference. For example, the output will be saved in the `./training/4dnex/2600-out` directory as follows:
+After training, you may convert the zero checkpoint to fp32 checkpoint for inference. For example, the output will be saved in the `./training/4dnex/5000-out` directory as follows:
 ```bash
-python scripts/zero_to_fp32.py ./training/4dnex/checkpoint-2600 ./training/4dnex/2600-out --safe_serialization
+python scripts/zero_to_fp32.py ./training/4dnex/checkpoint-5000 ./training/4dnex/5000-out --safe_serialization
 ```
 
 ## 📚 Citation
