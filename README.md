@@ -12,7 +12,7 @@
     <a href='https://jiawei-ren.github.io/' target='_blank'>Jiawei Ren</a><sup>1</sup>&emsp; <br>
     <a href='https://zeng-tao.github.io/' target='_blank'>Zeng Tao</a><sup>2</sup>&emsp;
     <a href='https://scholar.google.com/citations?hl=zh-CN&user=rI0fhugAAAAJ' target='_blank'>He Zhu</a><sup>2</sup>&emsp;
-    <a href='https://hongfz16.github.io/' target='_blank'>FangZhou Hong</a><sup>1</sup>&emsp;
+    <a href='https://hongfz16.github.io/' target='_blank'>Fangzhou Hong</a><sup>1</sup>&emsp;
     <a href='https://scholar.google.com/citations?user=lSDISOcAAAAJ&hl=zh-CN' target='_blank'>Liang Pan</a><sup>2†</sup>&emsp;
     <a href='https://liuziwei7.github.io/' target='_blank'>Ziwei Liu</a><sup>1†</sup>
 </div>
