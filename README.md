@@ -118,6 +118,8 @@ Then, you may visualize the pointmap registration results using [Rerun](https://
 python rerun_vis.py --rr_recording test_log.rrd --pkl_dir $OUTPUT_DIR
 rerun test_log.rrd --web-viewer
 ```
+![rerun_demo_github](https://github.com/user-attachments/assets/433b2df2-711f-4360-a2d2-144837ef3944)
+
 
 ## 🔥 Training
 
