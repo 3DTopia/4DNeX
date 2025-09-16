@@ -101,9 +101,10 @@ export PRETRAINED_LORA_PATH=./pretrained/4dnex-lora
 ```
 
 ### Inference 
-After setup the environment and pretrained model, you can run the following command to generate 4D scene representations from a single image, the output video and point map will be saved in the `OUTPUT_DIR` directory:
+After setup the environment and pretrained model, you can run the following command to generate 4D scene representations from a single image, the output video and point map will be saved in the `OUTPUT_DIR` directory. Assuming we are going to save the results in the `./results` directory, we can run the following command:
 ```bash
-python inference.py --prompt ./example/prompt.txt --image ./example/image.txt --out <OUTPUT_DIR> --sft_path ./pretrained/Wan2.1-I2V-14B-480P-Diffusers/transformer  --type i2vwbw-demb-samerope --mode xyzrgb --lora_path PRETRAINED_LORA_PATH --lora_rank 64
+export OUTPUT_DIR=./results
+python inference.py --prompt ./example/prompt.txt --image ./example/image.txt --out $OUTPUT_DIR --sft_path ./pretrained/Wan2.1-I2V-14B-480P-Diffusers/transformer  --type i2vwbw-demb-samerope --mode xyzrgb --lora_path $PRETRAINED_LORA_PATH --lora_rank 64
 ```
 We store the path to the image in the `./example/image.txt` file, and the prompt in the `./example/prompt.txt` file for inference. Feel free to modify the prompt and image path to generate your own 4D scene representations.
 
