@@ -58,8 +58,8 @@ We present **4DNeX**, the first feed-forward framework for generating 4D (i.e., 
 - [ ] Data Preprocessing Scripts
 - [x] Training Scripts
 - [x] Inference Scripts
-- [ ] Pointmap Registration Scripts
-- [ ] Visualization Scripts
+- [x] Pointmap Registration Scripts
+- [x] Visualization Scripts
 
 ## 🚀 Quick Start
 
@@ -107,6 +107,17 @@ export OUTPUT_DIR=./results
 python inference.py --prompt ./example/prompt.txt --image ./example/image.txt --out $OUTPUT_DIR --sft_path ./pretrained/Wan2.1-I2V-14B-480P-Diffusers/transformer  --type i2vwbw-demb-samerope --mode xyzrgb --lora_path $PRETRAINED_LORA_PATH --lora_rank 64
 ```
 We store the path to the image in the `./example/image.txt` file, and the prompt in the `./example/prompt.txt` file for inference. Feel free to modify the prompt and image path to generate your own 4D scene representations.
+
+### Visualization
+To visualize the generated 4D scene representations, you may first perform pointmap registration using the following command:
+```bash
+python pm_registration.py --pkl_dir $OUTPUT_DIR
+```
+Then, you may visualize the pointmap registration results using [Rerun](https://github.com/rerun-io/rerun) as follows:
+```bash
+python rerun_vis.py --rr_recording test_log.rrd --pkl_dir $OUTPUT_DIR
+rerun test_log.rrd --web-viewer
+```
 
 ## 🔥 Training
 
