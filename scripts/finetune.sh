@@ -20,8 +20,8 @@ export LAUNCHER="accelerate launch \
 export PROGRAM="\
 finetune.py \
     --model_path ./pretrained/Wan2.1-I2V-14B-480P-Diffusers \
-    --model_name wan-i2v \
-    --model_type wan-i2v-demb-samerope \
+    --model_name wan-i2v-demb-samerope \
+    --model_type wan-i2v \
     --training_type lora \
     --rank 64 \
     --lora_alpha 32 \

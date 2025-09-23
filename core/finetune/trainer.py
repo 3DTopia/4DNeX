@@ -189,8 +189,8 @@ class Trainer:
             pin_memory=self.args.pin_memory,
         )
         tmp_data_loader = self.accelerator.prepare_data_loader(tmp_data_loader)
-        # for _ in tmp_data_loader:
-            # ...
+        for _ in tmp_data_loader:
+            ...
         self.accelerator.wait_for_everyone()
         logger.info("Precomputing latent for video and prompt embedding ... Done")
 
