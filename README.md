@@ -158,8 +158,8 @@ Run the following command:
 
 ```bash
 python build_wan_dataset.py \
-  --data_dir ./data \   # input folder containing dynamic/ and static/
-  --out ./data/wan21 \ # output folder for processed WAN dataset
+  --data_dir ./data \ 
+  --out ./data/wan21
 ```
 
 After execution, the output directory will look like:
