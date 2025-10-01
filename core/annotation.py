@@ -1,8 +1,10 @@
 from functools import partial
 import cv2
+import os
 import numpy as np
 import torch
 from scipy.spatial.transform import Rotation
+import pandas as pd
 
 from core.dataclass import Pointmap, Video
 from core.utils import load_with_cache
@@ -17,75 +19,107 @@ class PexelsAnno:
         else:
             self._load = partial(load_from_ceph, client, cache_dir=cache_dir, parse_text_to_float=False)
         if caption is None:
-            caption = self._load(self._get_caption_path(video_path))[0]
+            caption = self._get_caption(video_path)
         fps = 24
         self.video = Video(
             path=video_path,
             caption=caption,
             fps =fps
         )
+
     @staticmethod
-    def _get_caption_path(video_path):
-        caption_path = video_path.replace('4DGen-Dataset/Human_Raw_Data', '4DGen-Dataset/Human_Raw_Data/sensetime/caption').replace('.mp4', '.txt')
+    def _get_caption(video_path):
+        if 'static' in video_path:
+            df = pd.read_csv(f'/share/project/cwm/tianqi.liu/workspace/zhaoxi/4DNeX-main/dataset/caption/{video_path.split("/")[-3]}_with_caption_upload.csv')
+            number_str = video_path.split('/')[-2]
+        elif 'dynamic' in video_path:
+            df = pd.read_csv(f'/share/project/cwm/tianqi.liu/workspace/zhaoxi/4DNeX-main/dataset/caption/{video_path.split("/")[-2]}_with_caption_upload.csv')
+            number_str = video_path.split('/')[-1].split('.')[0]
+        
+        def get_caption_by_number(number):
+            result = df.query(f"number == {number}")
+            if not result.empty:
+                return result.iloc[0]['caption']
+
+        number = int(number_str)
+        caption_path = get_caption_by_number(number)
         return caption_path
+
 
 class Monst3RAnno:
     def __init__(self, anno_dir, client=None, max_frames=None, cache_dir='.cache/', enable_cache=False, caption=None):
         self.anno_dir = anno_dir
         self.cache_dir = cache_dir
         self.enable_cache = enable_cache
+
         if enable_cache:
             self._load = partial(load_with_cache, client, cache_dir=cache_dir)
         else:
             self._load = partial(load_from_ceph, client, cache_dir=cache_dir)
 
-        # rgb not saved to ceph, load from video if using s3 path
-        if "s3://" in self.anno_dir:
-            self.clip_start, self.length = self._get_clip_range(anno_dir)
-            self._video_reader = self._load(self._get_video_path(anno_dir))
-        else:
-            self.clip_start = -1
-            self.length = len(self._load(self.anno_dir + f'pred_traj.txt'))
-
+        # rgb not saved to ceph, load from video
+        self.clip_start, self.length = self._get_clip_range(anno_dir)
+        video_path = self._get_video_path(anno_dir)
+        if not os.path.exists(video_path):
+            print(f"Video path {video_path} does not exist!")
+        self._video_reader = self._load(video_path)
+       
         self.length = min(self.length, max_frames) if max_frames is not None else self.length
 
-        rgb, rgb_raw, depth, camera_pose, camera_intrinscis, dynamic_mask = self._load_annotation()
-        global_ptmaps, colors = self._get_point_cloud(rgb, depth, camera_pose, camera_intrinscis)
-
-        self.pointmap = Pointmap(
-            pcd=global_ptmaps,    # [T, HxW, 3]
-            colors=colors,  # [T, HxW, 3]
-            rgb=rgb,    # [T, H, W, 3]
-            mask= dynamic_mask.reshape([self.length, -1]),  # [T, HxW]
-            cams2world=camera_pose, # [T, 4, 4]
-            K=camera_intrinscis,    # [T, 3, 3]
-            depth=depth,  # [T, H, W, 3]
-        )
+        if 'static' in anno_dir:
+            rgb, rgb_raw, camera_pose, global_ptmaps = self._load_annotation_static()
+            global_ptmaps = global_ptmaps.reshape([self.length, -1, 3])
+            self.pointmap = Pointmap(
+                pcd=global_ptmaps,    # [T, HxW, 3]
+                colors=None,  # [T, HxW, 3]
+                rgb=rgb,    # [T, H, W, 3]
+                mask= None,  # [T, HxW]
+                cams2world=camera_pose, # [T, 4, 4]
+                K=None,    # [T, 3, 3]
+                depth=None,  # [T, H, W, 3]
+            )
+        elif 'dynamic' in anno_dir:
+            rgb, rgb_raw, depth, camera_pose, camera_intrinscis, dynamic_mask = self._load_annotation_dynamic()
+            global_ptmaps, colors = self._get_point_cloud(rgb, depth, camera_pose, camera_intrinscis)
+            self.pointmap = Pointmap(
+                pcd=global_ptmaps,    # [T, HxW, 3]
+                colors=colors,  # [T, HxW, 3]
+                rgb=rgb,    # [T, H, W, 3]
+                mask= dynamic_mask.reshape([self.length, -1]),  # [T, HxW]
+                cams2world=camera_pose, # [T, 4, 4]
+                K=camera_intrinscis,    # [T, 3, 3]
+                depth=depth,  # [T, H, W, 3]
+            )
 
         self.rgb_raw = rgb_raw
 
         # load video annotation
-        if "s3://" in self.anno_dir:
-            self.video = PexelsAnno(video_path=self._get_video_path(anno_dir), client=client, cache_dir=cache_dir, caption=caption).video
-        else:
-            self.video = None
-
+        self.video = PexelsAnno(video_path=self._get_video_path(anno_dir), client=client, cache_dir=cache_dir, caption=caption).video
 
     @staticmethod
     def _get_clip_range(anno_dir):
-        clip_start, clip_end = anno_dir.split('/')[-2].split('.')[0].split('_')[-1].split('-')
-        return int(clip_start), int(clip_end) - int(clip_start) + 1
+        if os.path.isdir(anno_dir):
+            clip_start, clip_end = anno_dir.split('/')[-2].split('.')[0].split('_')[-1].split('-')
+            return int(clip_start), int(clip_end) - int(clip_start) + 1
+        elif os.path.isfile(anno_dir): # npz file
+            filename = os.path.basename(anno_dir)
+            name_without_ext = os.path.splitext(filename)[0]
+            start_frame, end_frame = name_without_ext.split('-')
+            
+            start_num = int(start_frame.split('_')[-1].replace('.png', ''))
+            end_num = int(end_frame.split('_')[-1].replace('.png', ''))
+            
+            clip_start = start_num
+            clip_length = end_num - start_num + 1
+            
+            return clip_start, clip_length
 
     @staticmethod
     def _get_video_path(anno_dir):
-        if "vbench" in anno_dir:
-            video_path = anno_dir.replace("vbench", "vbench_raw_video")
-            video_path = video_path.split('/clip')[0] + '.mp4'
-        else:
-            uid_frameid = anno_dir.split('/')[-3]
-            uid = uid_frameid.split('-')[0]
-            pexel_name = anno_dir.split('/')[-4]
-            video_path = f"pvgen:s3://4DGen-Dataset/Human_Raw_Data/pexels/{pexel_name}/{uid}/{uid_frameid}.mp4"
+        if 'static' in anno_dir:
+            video_path = f"/share/project/cwm/tianqi.liu/workspace/zhaoxi/4DNeX-main/dataset/raw/static/{anno_dir.split('/')[-3]}/{anno_dir.split('/')[-2]}/images_4"
+        elif 'dynamic' in anno_dir:
+            video_path = f"/share/project/cwm/tianqi.liu/workspace/zhaoxi/4DNeX-main/dataset/raw/dynamic/{anno_dir.split('/')[-4]}/{anno_dir.split('/')[-3]}.mp4"
         return video_path
 
     @staticmethod
@@ -140,7 +174,7 @@ class Monst3RAnno:
         return global_ptmaps.numpy(), colors.numpy()
 
 
-    def _load_annotation(self):
+    def _load_annotation_dynamic(self):
         pred_traj = self._load(self.anno_dir + f'pred_traj.txt')
         pred_intrinsics = self._load(self.anno_dir + f'pred_intrinsics.txt')
 
@@ -158,20 +192,15 @@ class Monst3RAnno:
             H, W = depth.shape[0], depth.shape[1]
 
             # load rgb
-            if "s3://" in self.anno_dir:
-                if isinstance(self._video_reader, np.ndarray):
-                    rgb_raw = self._video_reader[self.clip_start + t, ...]
-                else:
-                    rgb_raw = self._video_reader.get_data(self.clip_start + t)
-                rgb = cv2.resize(rgb_raw, (W, H))
-                # save rgb frames (optional)
-                if self.enable_cache:
-                    cv2.imwrite(self.cache_dir + self.anno_dir.split('s3://')[-1] + f'frame_{t:04d}.png', cv2.cvtColor(rgb, cv2.COLOR_RGB2BGR))
-                rgb = rgb.astype(np.float32) / 255
-                rgb_raw = rgb_raw.astype(np.float32) / 255
+            if isinstance(self._video_reader, np.ndarray):
+                rgb_raw = self._video_reader[self.clip_start + t, ...]
+            elif isinstance(self._video_reader, list):
+                rgb_raw = self._video_reader[self.clip_start + t]
             else:
-                rgb = self._load(self.anno_dir + f'frame_{t:04d}.png')
-                rgb = cv2.cvtColor(rgb, cv2.COLOR_RGB2BGR)
+                rgb_raw = self._video_reader.get_data(self.clip_start + t)
+            rgb = cv2.resize(rgb_raw, (W, H))
+            rgb = rgb.astype(np.float32) / 255
+            rgb_raw = rgb_raw.astype(np.float32) / 255
             rgb_list.append(rgb)
             rgb_raw_list.append(rgb_raw)
 
@@ -194,3 +223,36 @@ class Monst3RAnno:
         cam_intrinscis_list = cam_intrinscis_list.reshape([-1, 3, 3])    # [T, 3, 3]
 
         return rgb_list, rgb_raw_list, depth_list, cam_pose_list, cam_intrinscis_list, mask_list
+
+    def _load_annotation_static(self):
+        npz_path = self.anno_dir
+        npz_data = np.load(npz_path, allow_pickle=True)
+        data = {}
+        for key in npz_data.files:
+            if npz_data[key].shape == ():
+                content = npz_data[key].item()
+                for k, v in content.items():
+                    data[k] = v
+                    print(f"  {k}: 类型={type(v)}, 形状={getattr(v, 'shape', '无形状')}")
+        rgb_list = []
+        rgb_raw_list = []
+        for t in range(self.length):
+            H, W = data['pts3d'].shape[1], data['pts3d'].shape[2]
+            # load rgb
+            if isinstance(self._video_reader, np.ndarray):
+                rgb_raw = self._video_reader[self.clip_start + t, ...]
+            elif isinstance(self._video_reader, list):
+                rgb_raw = self._video_reader[self.clip_start + t]
+            else:
+                rgb_raw = self._video_reader.get_data(self.clip_start + t)
+            rgb = cv2.resize(rgb_raw, (W, H))
+            rgb = rgb.astype(np.float32) / 255
+            rgb_raw = rgb_raw.astype(np.float32) / 255
+
+            rgb_list.append(rgb)
+            rgb_raw_list.append(rgb_raw)
+
+        rgb_list = np.stack(rgb_list)       # [T, H, W ,3]
+        rgb_raw_list = np.stack(rgb_raw_list)       # [T, H_raw, W_raw, 3]
+     
+        return rgb_list, rgb_raw_list, data['poses'].astype(np.float32), data['pts3d'].astype(np.float32)

@@ -55,7 +55,7 @@
 We present **4DNeX**, the first feed-forward framework for generating 4D (i.e., dynamic 3D) scene representations from a single image. In contrast to existing methods that rely on computationally intensive optimization or require multi-frame video inputs, 4DNeX enables efficient, end-to-end image-to-4D generation by fine-tuning a pretrained video diffusion model. Specifically, **1)** To alleviate the scarcity of 4D data, we construct 4DNeX-10M, a large-scale dataset with high-quality 4D annotations generated using advanced reconstruction approaches. **2)** We introduce a unified 6D video representation that jointly models RGB and XYZ sequences, facilitating structured learning of both appearance and geometry. **3)** We propose a set of simple yet effective adaptation strategies to repurpose pretrained video diffusion models for the 4D generation task. 4DNeX produces high-quality dynamic point clouds that enable novel-view video synthesis. Extensive experiments demonstrate that 4DNeX achieves competitive performance compared to existing 4D generation approaches, offering a scalable and generalizable solution for single-image-based 4D scene generation.
 
 ## 🚧 TODO List
-- [ ] Data Preprocessing Scripts
+- [x] Data Preprocessing Scripts
 - [x] Training Scripts
 - [x] Inference Scripts
 - [x] Pointmap Registration Scripts
@@ -126,7 +126,56 @@ rerun test_log.rrd --web-viewer
 ### Prepare Data
 Please checkout our 10M 4D dataset from [here](https://huggingface.co/datasets/3DTopia/4DNeX-10M), and place it in the `./data` directory. 
 
-TODO: add the data preparation script.
+#### Input Directory Structure
+
+Your input `data_dir` can be organized as follows:
+
+```
+data/
+├── dynamic/
+│   ├── dynamic_1/
+│   ├── dynamic_2/
+│   └── dynamic_3/
+├── static/
+│   ├── static_1/
+│   └── static_2/
+├── caption/
+│   └── xx.csv
+    └── xx.csv
+└── raw/
+    ├── dynamic/
+    │   ├── dynamic_1/
+    │   ├── dynamic_2/
+    │   └── dynamic_3/
+    └── static/
+        ├── static_1/
+        └── static_2/
+```
+
+
+
+Run the following command:
+
+```bash
+python build_wan_dataset.py \
+  --data_dir ./data \   # input folder containing dynamic/ and static/
+  --out ./data/wan21 \ # output folder for processed WAN dataset
+```
+
+After execution, the output directory will look like:
+
+```
+wan21/
+├── cache/
+├── videos/
+├── first_frames/
+├── pointmap/
+├── pointmap_latents/
+├── prompts.txt
+├── videos.txt
+└── generated_datalist.txt
+```
+
 
 ### Launch Training
 To launch training, we assume all data are in the `./data/wan21` directory, and run the following command:

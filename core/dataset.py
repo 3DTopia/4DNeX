@@ -4,7 +4,7 @@ import numpy as np
 import imageio
 import random
 
-from petrel_client.client import Client
+from petrel_client.client import Client   # fallback to local/http
 from torch.utils.data import Dataset
 
 from core.annotation import Monst3RAnno, PexelsAnno

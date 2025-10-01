@@ -5,6 +5,7 @@ import os
 import imageio
 import cv2
 import io
+import re
 
 # Function to print attributes in a table-like format
 def print_attributes(obj, level=0):
@@ -65,16 +66,7 @@ def load_with_cache(client, file_path, cache_dir, parse_text_to_float=True):
 
 def load_from_ceph(client, file_path, cache_dir, parse_text_to_float=True):
     is_ceph_bytes = False
-    if "s3://" in file_path:
-        local_path = os.path.join(cache_dir, file_path.split('s3://')[-1])
-        # Download from S3
-        body = client.get(file_path)
-        file_bytes = io.BytesIO(body)
-        is_ceph_bytes = True
-        assert not os.path.exists(local_path)
-    else:
-        local_path = file_path
-
+    local_path = file_path
     # handle different file types
     if local_path.endswith('.txt'):
         if is_ceph_bytes:
@@ -112,6 +104,23 @@ def load_from_ceph(client, file_path, cache_dir, parse_text_to_float=True):
             return imageio.v3.imread(file_bytes, format_hint='.mp4')
         else:
             return imageio.get_reader(local_path, "ffmpeg")
+    elif os.path.isdir(local_path):
+        return load_png_sequence_from_folder(local_path, is_ceph_bytes)
+
+def load_png_sequence_from_folder(folder_path, is_ceph_bytes=False):
+    images = []
+    png_files = [f for f in os.listdir(folder_path) if f.endswith('.png') or f.endswith('.jpg')]
+    png_files_sorted = sorted(png_files, key=lambda x: [
+        int(part) if part.isdigit() else part 
+        for part in re.findall(r'\d+|\D+', x)
+    ])
+    
+    for png_file in png_files_sorted:
+        img_path = os.path.join(folder_path, png_file)
+        img = cv2.imread(img_path, cv2.IMREAD_UNCHANGED).astype(np.float32)
+        if img is not None:
+            images.append(img)
+    return images
 
 def signed_expm1(x):
     sign = torch.sign(x)
