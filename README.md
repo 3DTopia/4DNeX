@@ -126,9 +126,7 @@ rerun test_log.rrd --web-viewer
 ### Prepare Data
 Please checkout our 10M 4D dataset from [here](https://huggingface.co/datasets/3DTopia/4DNeX-10M), and place it in the `./data` directory. 
 
-#### Input Directory Structure
-
-Your input `data_dir` can be organized as follows:
+The data can be organized in the following structure:
 
 ```
 data/
@@ -140,8 +138,11 @@ data/
 │   ├── static_1/
 │   └── static_2/
 ├── caption/
-│   └── xx.csv
-    └── xx.csv
+│   └── dynamic_1_with_caption_upload.csv
+│   └── dynamic_2_with_caption_upload.csv
+│   └── dynamic_3_with_caption_upload.csv
+│   └── static_1_with_caption_upload.csv
+│   └── static_2_with_caption_upload.csv
 └── raw/
     ├── dynamic/
     │   ├── dynamic_1/
@@ -152,9 +153,7 @@ data/
         └── static_2/
 ```
 
-
-
-Run the following command:
+Run the command below to preprocess it:
 
 ```bash
 python build_wan_dataset.py \
@@ -162,7 +161,7 @@ python build_wan_dataset.py \
   --out ./data/wan21
 ```
 
-After execution, the output directory will look like:
+Once preprocessing is finished, the output directory will be organized as follows:
 
 ```
 wan21/
