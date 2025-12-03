@@ -409,6 +409,10 @@ def generate_datalist_from_directory(data_dir):
             # If this is the deepest level (no subdirectories) or contains video files
             if not dirs or any(file.endswith('.mp4') for file in files):
                 datalist.append(str(Path(root).absolute()) + '/')
+            for file in files:
+                if file.endswith('.npz'):
+                    full_path = Path(root) / file
+                    datalist.append(str(full_path.absolute()))
     
     # Process static data
     static_dir = data_dir / "static"

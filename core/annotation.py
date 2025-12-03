@@ -30,10 +30,10 @@ class PexelsAnno:
     @staticmethod
     def _get_caption(video_path):
         if 'static' in video_path:
-            df = pd.read_csv(f'/share/project/cwm/tianqi.liu/workspace/zhaoxi/4DNeX-main/dataset/caption/{video_path.split("/")[-3]}_with_caption_upload.csv')
+            df = pd.read_csv(f'./data/caption/{video_path.split("/")[-3]}_with_caption_upload.csv')
             number_str = video_path.split('/')[-2]
         elif 'dynamic' in video_path:
-            df = pd.read_csv(f'/share/project/cwm/tianqi.liu/workspace/zhaoxi/4DNeX-main/dataset/caption/{video_path.split("/")[-2]}_with_caption_upload.csv')
+            df = pd.read_csv(f'./data/caption/{video_path.split("/")[-2]}_with_caption_upload.csv')
             number_str = video_path.split('/')[-1].split('.')[0]
         
         def get_caption_by_number(number):
@@ -78,7 +78,7 @@ class Monst3RAnno:
                 K=None,    # [T, 3, 3]
                 depth=None,  # [T, H, W, 3]
             )
-        elif 'dynamic' in anno_dir:
+        elif 'dynamic' in anno_dir and 'dynamic_3' not in anno_dir:
             rgb, rgb_raw, depth, camera_pose, camera_intrinscis, dynamic_mask = self._load_annotation_dynamic()
             global_ptmaps, colors = self._get_point_cloud(rgb, depth, camera_pose, camera_intrinscis)
             self.pointmap = Pointmap(
@@ -90,6 +90,19 @@ class Monst3RAnno:
                 K=camera_intrinscis,    # [T, 3, 3]
                 depth=depth,  # [T, H, W, 3]
             )
+        elif 'dynamic_3' in anno_dir:
+            rgb, rgb_raw, depth, camera_pose, camera_intrinscis, dynamic_mask = self._load_annotation_dynamic_3()
+            global_ptmaps, colors = self._get_point_cloud(rgb, depth, camera_pose, camera_intrinscis)
+            self.pointmap = Pointmap(
+                pcd=global_ptmaps,    # [T, HxW, 3]
+                colors=colors,  # [T, HxW, 3]
+                rgb=rgb,    # [T, H, W, 3]
+                mask= dynamic_mask.reshape([self.length, -1]),  # [T, HxW]
+                cams2world=camera_pose, # [T, 4, 4]
+                K=camera_intrinscis,    # [T, 3, 3]
+                depth=depth,  # [T, H, W, 3]
+            )
+
 
         self.rgb_raw = rgb_raw
 
@@ -106,9 +119,13 @@ class Monst3RAnno:
             name_without_ext = os.path.splitext(filename)[0]
             start_frame, end_frame = name_without_ext.split('-')
             
-            start_num = int(start_frame.split('_')[-1].replace('.png', ''))
-            end_num = int(end_frame.split('_')[-1].replace('.png', ''))
-            
+            if '.png' in name_without_ext:
+                start_num = int(start_frame.split('_')[-1].replace('.png', ''))
+                end_num = int(end_frame.split('_')[-1].replace('.png', ''))
+            else:
+                start_num = int(start_frame.split('_')[-1])
+                end_num = int(end_frame.split('_')[1])
+
             clip_start = start_num
             clip_length = end_num - start_num + 1
             
@@ -117,9 +134,11 @@ class Monst3RAnno:
     @staticmethod
     def _get_video_path(anno_dir):
         if 'static' in anno_dir:
-            video_path = f"/share/project/cwm/tianqi.liu/workspace/zhaoxi/4DNeX-main/dataset/raw/static/{anno_dir.split('/')[-3]}/{anno_dir.split('/')[-2]}/images_4"
-        elif 'dynamic' in anno_dir:
-            video_path = f"/share/project/cwm/tianqi.liu/workspace/zhaoxi/4DNeX-main/dataset/raw/dynamic/{anno_dir.split('/')[-4]}/{anno_dir.split('/')[-3]}.mp4"
+            video_path = f"./data/raw/static/{anno_dir.split('/')[-3]}/{anno_dir.split('/')[-2]}/images_4"
+        elif 'dynamic' in anno_dir and 'dynamic_3' not in anno_dir:
+            video_path = f"./data/raw/dynamic/{anno_dir.split('/')[-4]}/{anno_dir.split('/')[-3]}.mp4"
+        elif 'dynamic_3' in anno_dir:
+            video_path = f"./data/raw/dynamic/{anno_dir.split('/')[-3]}/{anno_dir.split('/')[-2]}.mp4"
         return video_path
 
     @staticmethod
@@ -223,6 +242,91 @@ class Monst3RAnno:
         cam_intrinscis_list = cam_intrinscis_list.reshape([-1, 3, 3])    # [T, 3, 3]
 
         return rgb_list, rgb_raw_list, depth_list, cam_pose_list, cam_intrinscis_list, mask_list
+    
+    def _load_annotation_dynamic_3(self):
+        # Load all data from npz file
+        npz_path = self.anno_dir
+        npz_data = np.load(npz_path, allow_pickle=True)
+        
+        # Extract data from npz file
+        images = npz_data['images']           # [T, H, W, 3] or [T, H, W]
+        depths = npz_data['depths']           # [T, H, W]
+        intrinsics = npz_data['intrinsic']    # Could be scalar, [3,3] or [T, 3, 3]
+        cam_c2w = npz_data['cam_c2w']         # [T, 4, 4] camera-to-world transformation matrices
+        
+        # Ensure images are 3-channel and in correct range [0, 1]
+        if images.dtype == np.uint8:
+            images = images.astype(np.float32) / 255.0
+        
+        # Convert 2D images (single channel) to 3-channel
+        if len(images.shape) == 3:
+            images = np.stack([images] * 3, axis=-1)
+        
+        # Set sequence length based on number of images
+        self.length = images.shape[0]
+        
+        # Handle different intrinsic matrix formats
+        if intrinsics.ndim == 0:
+            # If scalar, tile to all frames
+            intrinsics = np.tile(intrinsics, (self.length, 1, 1))
+        elif intrinsics.ndim == 2:  # Single [3, 3] matrix
+            intrinsics = np.tile(intrinsics[np.newaxis, :, :], (self.length, 1, 1))
+        elif intrinsics.ndim == 3 and intrinsics.shape[0] == 1:  # [1, 3, 3]
+            intrinsics = np.tile(intrinsics, (self.length, 1, 1))
+        
+        # Ensure depth sequence matches image sequence length
+        if depths.shape[0] != self.length:
+            # Truncate or adjust if mismatch
+            depths = depths[:self.length]
+            cam_c2w = cam_c2w[:self.length]
+        
+        # Get original image dimensions
+        H_raw, W_raw = images.shape[1:3]
+        
+        # Get depth map dimensions
+        H, W = depths.shape[1:3]
+        
+        # Initialize lists for each data type
+        rgb_list = []
+        rgb_raw_list = []
+        depth_list = []
+        cam_pose_list = []
+        cam_intrinsics_list = []
+        
+        for t in range(self.length):
+            # Depth map
+            depth = depths[t]
+            depth_list.append(depth)
+            
+            # RGB image (original resolution)
+            rgb_raw = images[t]
+            rgb_raw_list.append(rgb_raw)
+            
+            # Resize RGB if needed to match depth dimensions
+            if H != H_raw or W != W_raw:
+                rgb = cv2.resize(rgb_raw, (W, H))
+            else:
+                rgb = rgb_raw.copy()
+            rgb_list.append(rgb)
+            
+            # Camera pose (camera-to-world matrix)
+            cam_pose_list.append(cam_c2w[t])
+            
+            # Camera intrinsics
+            cam_intrinsics_list.append(intrinsics[t])
+        
+        # Stack all data into numpy arrays
+        cam_pose_list = np.stack(cam_pose_list)          # [T, 4, 4]
+        cam_intrinsics_list = np.stack(cam_intrinsics_list)  # [T, 3, 3]
+        rgb_list = np.stack(rgb_list)                   # [T, H, W, 3]
+        rgb_raw_list = np.stack(rgb_raw_list)           # [T, H_raw, W_raw, 3]
+        depth_list = np.stack(depth_list)               # [T, H, W]
+        
+        # Note: The npz file doesn't contain mask data
+        # Create zero mask as placeholder (or load from separate source)
+        mask_list = np.zeros_like(depth_list, dtype=np.uint8)
+        
+        return rgb_list, rgb_raw_list, depth_list, cam_pose_list, cam_intrinsics_list, mask_list
 
     def _load_annotation_static(self):
         npz_path = self.anno_dir
