@@ -29,9 +29,12 @@ class PexelsAnno:
 
     @staticmethod
     def _get_caption(video_path):
-        if 'static' in video_path:
+        if 'static_1' in video_path:
             df = pd.read_csv(f'./data/caption/{video_path.split("/")[-3]}_with_caption_upload.csv')
             number_str = video_path.split('/')[-2]
+        if 'static_2' in video_path:
+            df = pd.read_csv(f'./data/caption/{video_path.split("/")[-2]}_with_caption_upload.csv')
+            number_str = video_path.split('/')[-1].split('.')[0]
         elif 'dynamic' in video_path:
             df = pd.read_csv(f'./data/caption/{video_path.split("/")[-2]}_with_caption_upload.csv')
             number_str = video_path.split('/')[-1].split('.')[0]
@@ -133,8 +136,10 @@ class Monst3RAnno:
 
     @staticmethod
     def _get_video_path(anno_dir):
-        if 'static' in anno_dir:
+        if 'static_1' in anno_dir:
             video_path = f"./data/raw/static/{anno_dir.split('/')[-3]}/{anno_dir.split('/')[-2]}/images_4"
+        elif 'static_2' in anno_dir:
+            video_path = f"./data/raw/static/{anno_dir.split('/')[-4]}/{anno_dir.split('/')[-2]}.mp4"
         elif 'dynamic' in anno_dir and 'dynamic_3' not in anno_dir:
             video_path = f"./data/raw/dynamic/{anno_dir.split('/')[-4]}/{anno_dir.split('/')[-3]}.mp4"
         elif 'dynamic_3' in anno_dir:
@@ -337,7 +342,6 @@ class Monst3RAnno:
                 content = npz_data[key].item()
                 for k, v in content.items():
                     data[k] = v
-                    print(f"  {k}: 类型={type(v)}, 形状={getattr(v, 'shape', '无形状')}")
         rgb_list = []
         rgb_raw_list = []
         for t in range(self.length):
