@@ -29,12 +29,11 @@
   <a href="https://arxiv.org/abs/2508.13154" target='_blank'>
     <img src="http://img.shields.io/badge/arXiv-2508.13154-b31b1b?logo=arxiv&logoColor=b31b1b" alt="ArXiv">
   </a>
-  <a href="https://4dnex.github.io/4DNeX.pdf" target='_blank'><img src="https://img.shields.io/badge/Paper-PDF-f5cac3?logo=adobeacrobatreader&logoColor=red"/></a>
   <a href="https://4dnex.github.io/" target='_blank'>
     <img src="https://img.shields.io/badge/Project-Page-red?logo=googlechrome&logoColor=red">
   </a>
-  <a href="https://huggingface.co/datasets/3DTopia/4DNeX-10M" target='_blank'>
-    <img src="https://img.shields.io/badge/Dataset-Download-green?logo=googledrive&logoColor=white">
+  <a href='https://huggingface.co/datasets/3DTopia/4DNeX-10M'>
+      <img src='https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Dataset-blue'>
   </a>
   <a href="https://www.youtube.com/watch?v=jaXNU1-0zgk">
     <img src="https://img.shields.io/badge/YouTube-Video-blue?logo=youtube&logoColor=blue">
@@ -115,7 +114,9 @@ python pm_registration.py --pkl_dir $OUTPUT_DIR
 ```
 Then, you may visualize the pointmap registration results using [Rerun](https://github.com/rerun-io/rerun) as follows:
 ```bash
+# Generate the Rerun log file (.rrd)
 python rerun_vis.py --rr_recording test_log.rrd --pkl_dir $OUTPUT_DIR
+# Launch the Rerun viewer
 rerun test_log.rrd --web-viewer
 ```
 ![rerun_demo_github](https://github.com/user-attachments/assets/433b2df2-711f-4360-a2d2-144837ef3944)
